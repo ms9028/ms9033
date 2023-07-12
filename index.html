@@ -1,0 +1,58 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping Mall Site</title>
+</head>
+<body>
+    <h1>Welcome to the Shopping Mall Site</h1>
+
+    <!-- Login form -->
+    <div id="login-window">
+        <h2>Login</h2>
+        <form action="login.php" method="POST">
+            <label for="login-username">Username:</label>
+            <input type="text" id="login-username" name="username" required><br>
+
+            <label for="login-password">Password:</label>
+            <input type="password" id="login-password" name="password" required><br>
+
+            <input type="submit" value="Log In">
+        </form>
+        <p>Don't have an account? <a href="#" onclick="toggleWindows()">Sign up</a></p>
+    </div>
+
+    <!-- Signup form -->
+    <div id="signup-window" style="display: none;">
+        <h2>Sign Up</h2>
+        <form action="register.php" method="POST">
+            <label for="signup-username">Username:</label>
+            <input type="text" id="signup-username" name="username" required><br>
+
+            <label for="signup-password">Password:</label>
+            <input type="password" id="signup-password" name="password" required><br>
+
+            <label for="signup-email">Email:</label>
+            <input type="email" id="signup-email" name="email" required><br>
+
+            <input type="submit" value="Sign Up">
+        </form>
+        <p>Already have an account? <a href="#" onclick="toggleWindows()">Log in</a></p>
+    </div>
+
+    <script>
+        function toggleWindows() {
+            var loginWindow = document.getElementById("login-window");
+            var signupWindow = document.getElementById("signup-window");
+
+            if (loginWindow.style.display === "none") {
+                loginWindow.style.display = "block";
+                signupWindow.style.display = "none";
+            } else {
+                loginWindow.style.display = "none";
+                signupWindow.style.display = "block";
+            }
+        }
+    </script>
+</body>
+</html>
