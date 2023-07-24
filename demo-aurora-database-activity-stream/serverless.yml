@@ -1,0 +1,117 @@
+frameworkVersion: '3'
+service: demo-aurora-database-activity-stream
+app: backend
+useDotenv: true
+email: rubywave.lecture.sandbox@gmail.com
+provider:
+  name: aws
+  runtime: nodejs16.x
+  deploymentMethod: direct
+  versionFunctions: false
+  iam:
+    role: DefaultRole
+  httpApi:
+    cors: true
+  stage: dev-1
+  tags:
+    Service: ${self:service}
+    Environment: ${env:STAGE, "dev"}
+  stackTags:
+    Service: ${self:service}
+    Environment: ${env:STAGE, "dev"}
+  region: ${opt:region, "ap-northeast-2"}
+  stackName: ${self:service}-${env:STAGE, "dev"}-${env:VER, "1"}-serverless
+  timeout: 30
+  environment:
+    service: ${self:service}
+    version: ${env:VER, "1"}
+    stage: ${env:STAGE, "dev"}
+    region: ${opt:region, "ap-northeast-2"}
+    app: ${self:app}
+    clusterId: cluster-2HG7EV5HTETLCENOJOL6T2626I
+    databaseName: db_my_database
+    tableName: tb_my_table
+    alarm_topic:
+      Ref: AlarmTopic
+  deploymentBucket:
+    name: ${aws:accountId}-serverless-deploys
+    maxPreviousDeploymentArtifacts: 5
+    blockPublicAccess: true
+  deploymentPrefix: ${self:service}-${env:STAGE, "dev"}-${env:VER, "1"}-serviceBackend
+plugins:
+  - serverless-deployment-bucket
+  - serverless-cloudformation-sub-variables
+resources:
+  Resources:
+    AlarmTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        Subscription:
+          - Endpoint: ${self:email}
+            Protocol: email
+    AlarmTopicpolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Id: AlarmTopicpolicy
+          Version: '2012-10-17'
+          Statement:
+            - Sid: state1
+              Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sns:Publish
+              Resource: '*'
+        Topics:
+          - Ref: AlarmTopic
+    DefaultRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${env:STAGE, "dev"}-${env:VER, "1"}-LambdaExcutionRole
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+            - Effect: Allow
+              Principal:
+                Service:
+                  - iam.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+          - arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
+          - arn:aws:iam::aws:policy/CloudWatchFullAccess
+          - arn:aws:iam::aws:policy/AmazonKinesisFullAccess
+          - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+        Policies:
+          - PolicyName: myPolicyName
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - sts:AssumeRole
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
+                    - kms:*
+                  Resource: '*'
+  Outputs:
+    ServerlessDeploymentBucketName:
+      Export:
+        Name: ${self:provider.stackName}-ServiceEndpoint
+      Value: ${self:provider.stackName}-ServiceEndpoint
+custom: null
+functions:
+  kensis_kinesisHandler:
+    name: ${self:service}_dev_1_kensis_kinesisHandler
+    handler: src/lambda/kensis/kinesisHandler.handler
+    events: []
+    memorySize: 300

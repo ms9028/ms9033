@@ -1,0 +1,130 @@
+frameworkVersion: "3"
+service: demo-aurora-database-activity-stream
+app: backend
+useDotenv: true
+## [My Email] 부분을 자신의 이메일로 변경해주세요. [] 삭제 필요
+email: alstjd4022@naver.com
+provider:
+  name: aws
+  runtime: nodejs16.x
+  deploymentMethod: direct
+  versionFunctions: false
+  iam:
+    role: DefaultRole
+  httpApi:
+    cors: true
+  stage: ${env:STAGE, "dev"}
+  tags:
+    Service: ${self:service}
+    Environment: ${env:STAGE, "dev"}
+  stackTags:
+    Service: ${self:service}
+    Environment: ${env:STAGE, "dev"}
+  region: ${opt:region, "ap-northeast-2"}
+  stackName: ${self:service}-${env:STAGE, "dev"}-${env:VER, "1"}-serverless
+  timeout: 30 #api gateway를 거칠 경우 lambda의 max
+  environment:
+    service: ${self:service}
+    version: ${env:VER, "1"}
+    stage: ${env:STAGE, "dev"}
+    region: ${opt:region, "ap-northeast-2"}
+    app: ${self:app}
+## cluster id 입력([Cluster -ID] 부분에 입력])
+    clusterId: cluster-J6RJG6GEVPJYTRINY2ZNYLSNOY
+## database 입력
+    databaseName: db_my_database
+    tableName: tb_my_table
+    alarm_topic:
+      Ref: AlarmTopic
+  deploymentBucket:
+    name: ${aws:accountId}-serverless-deploys
+    maxPreviousDeploymentArtifacts: 5
+    blockPublicAccess: true
+  deploymentPrefix: ${self:service}-${env:STAGE, "dev"}-${env:VER, "1"}-serviceBackend
+plugins:
+  - serverless-deployment-bucket
+  - serverless-cloudformation-sub-variables
+ 
+resources: # CloudFormation template syntax
+  Resources:
+    AlarmTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        Subscription:
+          - Endpoint: ${self:email}
+            Protocol: email
+    AlarmTopicpolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Id: AlarmTopicpolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: state1
+              Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sns:Publish
+              Resource: "*"
+        Topics:
+          - Ref: AlarmTopic
+    DefaultRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${env:STAGE, "dev"}-${env:VER, "1"}-LambdaExcutionRole
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+            - Effect: Allow
+              Principal:
+                Service:
+                  - iam.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+          - arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
+          - arn:aws:iam::aws:policy/CloudWatchFullAccess
+          - arn:aws:iam::aws:policy/AmazonKinesisFullAccess
+          - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+         
+        Policies:
+          - PolicyName: myPolicyName
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - sts:AssumeRole
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - kms:*
+                  Resource: "*"
+    # WebsocketApigatewayParms:
+    #   Type: AWS::SSM::Parameter
+    #   Properties:
+    #     Name: /${self:service}/${env:STAGE, "dev"}/websocket_api_gateway_id/${env:VER, "1"}
+    #     Type: String
+    #     Value:
+    #       Ref: WebsocketsApi
+    #     Description: WobsocketAPIId
+    # ApigatewayParms:
+    #   Type: AWS::SSM::Parameter
+    #   Properties:
+    #     Name: /${self:service}/${env:STAGE, "dev"}/api_gateway_id/${env:VER, "1"}
+    #     Type: String
+    #     Value:
+    #       Ref: HttpApi
+    #     Description: ApiGatewayId
+
+custom:
+
+functions:
